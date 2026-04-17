@@ -1,0 +1,605 @@
+{
+  "name": "BOT de conversação via Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "13cd3a3a-70e9-4185-b20a-5d84300b3d50",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        -416,
+        192
+      ],
+      "webhookId": "912e007f-19d9-4b5a-a90e-12ba01c9978d",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "ysST2fluFmqg4xkw",
+          "name": "Telegram MotaFlowBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "id": "1e8985de-d48f-4e30-a6a2-d5ccf0c36a4a",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        800,
+        720
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": "xbVFgagw7DSv0iRh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 10
+      },
+      "id": "242a9e2a-8cd0-4b7e-8e68-b7d1817c3165",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        1008,
+        720
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "89a374d5-d0f8-4c8e-a2f8-5e3c04f83f06",
+      "name": "Get Voice",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        320,
+        368
+      ],
+      "webhookId": "1962cd81-9991-4199-a78a-2250bf29631a",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "ysST2fluFmqg4xkw",
+          "name": "Telegram MotaFlowBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "0a236099-525e-4748-a57d-8b8e2c63c48b",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "24b7e8b8-6fce-4ddc-94b6-30b852891995",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{  $json.message.voice.file_id }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Voice"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2783e5b1-5c0a-4d0d-91af-30fc1cf854a2",
+      "name": "Text Or Voice",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        0,
+        192
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "e2493e4f-2161-4d26-a537-01cb22da46a2",
+      "name": "Transcribe The Voice",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        512,
+        368
+      ],
+      "typeVersion": 1.8,
+      "credentials": {
+        "openAiApi": {
+          "id": "xbVFgagw7DSv0iRh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=# Overview\nYou are a personal assistant that helps user to fulfill their request.\n\nWhen you are asked to perform a task on the current date, please use the current time and date: {{$now}}\n\n## Output\nYou should output the result and don't include any link. Just mentioned where you added it to."
+        }
+      },
+      "id": "5976e9a0-cd87-4679-a53e-786e20f9cb82",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        960,
+        448
+      ],
+      "typeVersion": 1.9
+    },
+    {
+      "parameters": {
+        "operation": "sendChatAction",
+        "chatId": "={{ $json.message.chat.id }}"
+      },
+      "id": "45307ef7-c57f-4135-98ea-c88498fbbfab",
+      "name": "Typing Action",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2479f7f8-6d54-4d45-921e-af6dcfae768e",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "ysST2fluFmqg4xkw",
+          "name": "Telegram MotaFlowBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{$('Telegram Trigger').first().json.message.chat.id}}",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "698abbfb-834f-45bf-a680-9b679619cc3f",
+      "name": "Send Response To Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        1536,
+        464
+      ],
+      "webhookId": "76e4b8a4-1086-4d24-b60e-b96942d83bdf",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "ysST2fluFmqg4xkw",
+          "name": "Telegram MotaFlowBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "590b803f-833c-4854-bde7-5241d25b2b32",
+              "name": "message.text",
+              "type": "string",
+              "value": "={{ $json.message.text }}"
+            },
+            {
+              "id": "303e0b5d-3d37-48fc-bbd3-ce62dbe7ef78",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8366dd56-5249-40fa-8c82-a372688f515a",
+      "name": "Send Context To AI Agent",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        704,
+        176
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2bb71aef-0ca1-4c26-95e1-c0c83bc82068",
+              "name": "message.text",
+              "type": "string",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "id": "692a2bae-35da-41d3-be8d-32c0f5dfbbef",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a6b47a8e-08bb-4da5-a98f-79d389b325ce",
+      "name": "Send Transcribe Context To AI Agent",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        704,
+        368
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $('AI Agent').item.json.output }}",
+        "options": {
+          "response_format": "mp3"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        1536,
+        272
+      ],
+      "id": "a0fc6966-55fe-473b-8e0a-cfa5e70daea1",
+      "name": "Generate audio",
+      "credentials": {
+        "openAiApi": {
+          "id": "xbVFgagw7DSv0iRh",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{$('Telegram Trigger').first().json.message.chat.id}}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "3b931ff9-178a-432a-8b3a-3f6ff6f5b66c",
+      "name": "Send Audio To Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        1808,
+        272
+      ],
+      "webhookId": "76e4b8a4-1086-4d24-b60e-b96942d83bdf",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "ysST2fluFmqg4xkw",
+          "name": "Telegram MotaFlowBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "7cccf88f-c9ca-4712-9656-a1d259b69b35"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "24cef98c-f49c-4a2c-90d8-2ada39eeecec",
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        448
+      ],
+      "id": "859825b5-5517-4d3c-a213-a42af38f0d62",
+      "name": "Switch"
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 469408675,
+          "message": {
+            "message_id": 6,
+            "from": {
+              "id": 1717143755,
+              "is_bot": false,
+              "first_name": "Alexandre",
+              "last_name": "Mota",
+              "language_code": "pt-br"
+            },
+            "chat": {
+              "id": 1717143755,
+              "first_name": "Alexandre",
+              "last_name": "Mota",
+              "type": "private"
+            },
+            "date": 1776452604,
+            "voice": {
+              "duration": 5,
+              "mime_type": "audio/ogg",
+              "file_id": "AwACAgEAAxkBAAMGaeKD_P-oBwPIAsvR_RR_YauMAmoAAqcGAAJPmhBHIddpgfLQyNA7BA",
+              "file_unique_id": "AgADpwYAAk-aEEc",
+              "file_size": 22157
+            }
+          }
+        }
+      }
+    ],
+    "AI Agent": [
+      {
+        "json": {
+          "output": "A semana que vem após a data atual (17 de abril de 2026) é a semana de 20 a 26 de abril de 2026. \n\nNo Brasil, o dia 21 de abril é feriado nacional, conhecido como Dia de Tiradentes. Portanto, na semana que vem, o feriado é terça-feira, dia 21 de abril de 2026."
+        }
+      }
+    ]
+  },
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Voice": {
+      "main": [
+        [
+          {
+            "node": "Transcribe The Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Or Voice": {
+      "main": [
+        [
+          {
+            "node": "Send Context To AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Or Voice",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Typing Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe The Voice": {
+      "main": [
+        [
+          {
+            "node": "Send Transcribe Context To AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Context To AI Agent": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Transcribe Context To AI Agent": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate audio": {
+      "main": [
+        [
+          {
+            "node": "Send Audio To Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Generate audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Response To Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "afcd592a-b6fe-41b1-9d27-45e358b4c4f7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ef3b4789cf5f27131a369424832ba6179151c9a859b0ed5cb06be247962453e1"
+  },
+  "id": "K5Y0fV50BT1nWEb5",
+  "tags": []
+}
